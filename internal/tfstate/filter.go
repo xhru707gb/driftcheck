@@ -2,63 +2,52 @@ package tfstate
 
 import "strings"
 
-// FilterOptions controls which resources are included in drift checks.
+// FilterOptions controls which resources are included in a filtered State.
 type FilterOptions struct {
-	// ResourceTypes limits checking to specific resource types (e.g. "aws_instance").
-	// If empty, all types are included.
-	ResourceTypes []string
-
-	// NamePrefix limits checking to resources whose name starts with the given prefix.
-	// If empty, all names are included.
-	NamePrefix string
-
-	// ExcludeTypes lists resource types to skip entirely.
-	ExcludeTypes []string
+	Types       []string // include only these resource types
+	ExcludeTypes []string // exclude these resource types
+	NamePrefix  string   // include only resources whose name starts with this prefix
 }
 
-// Filter returns a new State containing only the resources that match the
-// given FilterOptions.
-func (s *State) Filter(opts FilterOptions) *State {
-	includeTypes := toSet(opts.ResourceTypes)
+// Filter returns a new State containing only the resources that match opts.
+func Filter(s *State, opts FilterOptions) *State {
+	includeTypes := toSet(opts.Types)
 	excludeTypes := toSet(opts.ExcludeTypes)
 
-	filtered := NewState()
-
+	out := NewState()
 	for _, key := range s.Keys() {
 		res, ok := s.Get(key)
 		if !ok {
 			continue
 		}
 
-		// Apply type exclusion first.
-		if len(excludeTypes) > 0 {
-			if _, excluded := excludeTypes[key.Type]; excluded {
-				continue
-			}
-		}
-
-		// Apply type inclusion filter.
+		// type allow-list
 		if len(includeTypes) > 0 {
-			if _, included := includeTypes[key.Type]; !included {
+			if _, allowed := includeTypes[res.Type]; !allowed {
 				continue
 			}
 		}
 
-		// Apply name prefix filter.
-		if opts.NamePrefix != "" && !strings.HasPrefix(key.Name, opts.NamePrefix) {
+		// type deny-list
+		if _, excluded := excludeTypes[res.Type]; excluded {
 			continue
 		}
 
-		filtered.Add(res)
-	}
+		// name prefix
+		if opts.NamePrefix != "" && !strings.HasPrefix(res.Name, opts.NamePrefix) {
+			continue
+		}
 
-	return filtered
+		out.Add(res)
+	}
+	return out
 }
 
+// toSet converts a string slice to a set (map[string]struct{}).
 func toSet(items []string) map[string]struct{} {
-	set := make(map[string]struct{}, len(items))
-	for _, item := range items {
-		set[item] = struct{}{}
+	m := make(map[string]struct{}, len(items))
+	for _, v := range items {
+		m[v] = struct{}{}
 	}
-	return set
+	return m
 }
