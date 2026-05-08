@@ -74,3 +74,21 @@ func (d *Detector) Compare(state *tfstate.State, liveAttrs map[string]map[string
 	}
 	return findings
 }
+
+// HasDrift returns true if any findings of the given kinds are present.
+// If no kinds are specified, it returns true for any finding.
+func HasDrift(findings []Finding, kinds ...DriftKind) bool {
+	if len(kinds) == 0 {
+		return len(findings) > 0
+	}
+	kindSet := make(map[DriftKind]struct{}, len(kinds))
+	for _, k := range kinds {
+		kindSet[k] = struct{}{}
+	}
+	for _, f := range findings {
+		if _, ok := kindSet[f.Kind]; ok {
+			return true
+		}
+	}
+	return false
+}
