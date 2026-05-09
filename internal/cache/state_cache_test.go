@@ -80,3 +80,28 @@ func TestCache_InvalidateNonExistent(t *testing.T) {
 		t.Fatalf("Invalidate non-existent should not error: %v", err)
 	}
 }
+
+func TestCache_OverwriteEntry(t *testing.T) {
+	c := newTempCache(t, time.Minute)
+	first := &cache.Entry{
+		ResourceID: "aws_instance.web",
+		Attributes: map[string]interface{}{"instance_type": "t3.micro"},
+	}
+	if err := c.Set(first); err != nil {
+		t.Fatalf("Set first: %v", err)
+	}
+	second := &cache.Entry{
+		ResourceID: "aws_instance.web",
+		Attributes: map[string]interface{}{"instance_type": "t3.large"},
+	}
+	if err := c.Set(second); err != nil {
+		t.Fatalf("Set second: %v", err)
+	}
+	got, ok := c.Get("aws_instance.web")
+	if !ok {
+		t.Fatal("expected cache hit after overwrite")
+	}
+	if got.Attributes["instance_type"] != "t3.large" {
+		t.Errorf("expected overwritten value, got: %v", got.Attributes)
+	}
+}
