@@ -68,3 +68,13 @@ func TestFilter_ExcludeOverridesInclude(t *testing.T) {
 	})
 	assert.Equal(t, 0, len(out.Keys()))
 }
+
+func TestFilter_MultipleTypes(t *testing.T) {
+	s := buildTestState()
+	out := Filter(s, FilterOptions{Types: []string{"aws_instance", "aws_s3_bucket"}})
+	require.Equal(t, 3, len(out.Keys()))
+	for _, k := range out.Keys() {
+		res, _ := out.Get(k)
+		assert.Contains(t, []string{"aws_instance", "aws_s3_bucket"}, res.Type)
+	}
+}
