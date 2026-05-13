@@ -79,3 +79,22 @@ func TestState_AddOverwrite(t *testing.T) {
 		t.Errorf("expected overwritten value ami-new")
 	}
 }
+
+func TestState_Remove(t *testing.T) {
+	s := NewState()
+	k := ResourceKey{Type: "aws_instance", Name: "web"}
+	s.Add(&Resource{Key: k, Attributes: map[string]interface{}{"ami": "ami-123"}})
+
+	if s.Len() != 1 {
+		t.Fatalf("expected 1 resource before remove, got %d", s.Len())
+	}
+
+	s.Remove(k)
+
+	if s.Len() != 0 {
+		t.Errorf("expected 0 resources after remove, got %d", s.Len())
+	}
+	if s.Get(k) != nil {
+		t.Errorf("expected nil after remove, got resource")
+	}
+}
